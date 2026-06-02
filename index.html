@@ -1,0 +1,832 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>The Insider Edit — London</title>
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;1,300;1,400&family=Jost:wght@300;400;500&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --cream: #F9F6F1;
+      --ink:   #1A1A1A;
+      --muted: #8A8078;
+      --rule:  #D6D0C8;
+      --accent:#B5472A;
+    }
+
+    body { background: var(--cream); color: var(--ink); font-family: 'Jost', sans-serif; font-weight: 300; }
+
+    /* ── HEADER ── */
+    header { border-bottom: 1px solid var(--rule); padding: 0 2rem; }
+
+    .masthead {
+      text-align: center; padding: 2.5rem 0 1rem;
+      letter-spacing: 0.25em;
+      font-family: 'Cormorant Garamond', serif;
+      font-size: clamp(1.8rem, 6vw, 4rem);
+      font-weight: 300; text-transform: uppercase;
+    }
+
+    .tagline {
+      text-align: center; font-size: 0.7rem;
+      letter-spacing: 0.3em; text-transform: uppercase;
+      color: var(--muted); padding-bottom: 1.5rem;
+    }
+
+    /* ── NAV ── */
+    nav {
+      display: flex; align-items: center; justify-content: center;
+      gap: 2.5rem; padding: 1rem 0;
+      border-top: 1px solid var(--rule);
+      flex-wrap: wrap;
+    }
+
+    .nav-item { display: flex; align-items: center; gap: 0.35rem; }
+
+    .nav-label {
+      font-size: 0.62rem; letter-spacing: 0.22em;
+      text-transform: uppercase; color: var(--muted);
+    }
+
+    .nav-sep { color: var(--rule); }
+
+    /* Dropdown */
+    .nav-dropdown { position: relative; }
+
+    .nav-trigger {
+      font-family: 'Jost', sans-serif; font-size: 0.72rem;
+      font-weight: 500; letter-spacing: 0.18em; text-transform: uppercase;
+      color: var(--ink); background: none; border: none;
+      cursor: pointer; padding: 0;
+      display: flex; align-items: center; gap: 0.25em;
+    }
+
+    .nav-trigger .chevron {
+      font-size: 0.55rem; color: var(--muted);
+      display: inline-block; transition: transform 0.2s;
+      line-height: 1;
+    }
+
+    .nav-dropdown.open .chevron { transform: rotate(180deg); }
+
+    .nav-menu {
+      display: none;
+      position: absolute; top: calc(100% + 1rem); left: 50%;
+      transform: translateX(-50%);
+      background: var(--cream);
+      border: 1px solid var(--rule);
+      min-width: 120px;
+      box-shadow: 0 6px 20px rgba(0,0,0,0.07);
+      z-index: 300;
+    }
+
+    .nav-dropdown.open .nav-menu { display: block; }
+
+    .nav-menu a {
+      display: block; padding: 0.6rem 1.2rem;
+      font-family: 'Jost', sans-serif;
+      font-size: 0.68rem; font-weight: 400;
+      letter-spacing: 0.16em; text-transform: uppercase;
+      color: var(--ink); text-decoration: none;
+    }
+
+    .nav-menu a:hover { color: var(--accent); }
+    .nav-menu a.current { color: var(--muted); pointer-events: none; }
+
+    .nav-about {
+      font-family: 'Jost', sans-serif; font-size: 0.72rem;
+      font-weight: 500; letter-spacing: 0.18em; text-transform: uppercase;
+      color: var(--ink); text-decoration: none;
+    }
+
+    /* ── CUISINE SECTIONS ── */
+    .cuisine-section { display: none; }
+    .cuisine-section.active { display: block; }
+
+    /* ── EDITION BAR ── */
+    .edition-bar {
+      max-width: 780px; margin: 2.5rem auto 0;
+      padding: 0 1.5rem;
+      display: flex; align-items: baseline; gap: 1rem;
+    }
+
+    .edition-title {
+      font-family: 'Cormorant Garamond', serif;
+      font-size: 1.6rem; font-weight: 300; font-style: italic;
+      white-space: nowrap;
+    }
+
+    .edition-sub {
+      font-size: 0.65rem; letter-spacing: 0.2em;
+      text-transform: uppercase; color: var(--muted);
+      white-space: nowrap;
+    }
+
+    .edition-rule { flex: 1; height: 1px; background: var(--rule); margin-left: 1rem; }
+
+    /* ── CARDS ── */
+    .list {
+      max-width: 780px; margin: 0 auto;
+      padding: 2rem 1.5rem 4rem;
+      display: flex; flex-direction: column; gap: 4rem;
+    }
+
+    .card { position: relative; }
+    .card-image-wrap { position: relative; line-height: 0; }
+    .card-rank { display: none; }
+
+    .card-number {
+      font-family: 'Cormorant Garamond', serif;
+      font-style: italic; font-weight: 300;
+      font-size: clamp(1.1rem, 2.8vw, 1.4rem);
+      color: var(--accent); letter-spacing: 0.04em;
+      margin-right: 0.45em; vertical-align: baseline;
+    }
+
+    .card-image {
+      width: 100%; aspect-ratio: 16/9;
+      object-fit: cover; display: block;
+    }
+
+    .card-body {
+      padding: 1.4rem 0 2rem;
+      border-bottom: 1px solid var(--rule);
+    }
+
+    .card-name {
+      font-family: 'Cormorant Garamond', serif;
+      font-size: clamp(1.6rem, 4vw, 2.4rem);
+      font-weight: 400; line-height: 1.1; margin-bottom: 0.6rem;
+    }
+
+    .card-commentary {
+      font-size: 0.92rem; line-height: 1.75;
+      color: #3A3530; margin-bottom: 1.1rem; max-width: 600px;
+    }
+
+    .card-meta {
+      display: flex; flex-wrap: wrap;
+      align-items: center; gap: 1rem 2rem;
+      font-size: 0.72rem; letter-spacing: 0.08em; color: var(--muted);
+    }
+
+    .stars { display: flex; align-items: center; gap: 0.3rem; }
+    .stars svg { width: 13px; height: 13px; }
+    .rating-score { font-weight: 500; color: var(--ink); font-size: 0.8rem; }
+
+    .card-address::before { content: "📍 "; }
+
+    .card-link a {
+      color: var(--accent); text-decoration: none;
+      font-size: 0.72rem; letter-spacing: 0.12em; text-transform: uppercase;
+      border-bottom: 1px solid transparent; transition: border-color 0.2s;
+    }
+
+    .card-link a:hover { border-color: var(--accent); }
+
+    /* ── MAP ── */
+    .map-section {
+      max-width: 780px; margin: 0 auto 5rem; padding: 0 1.5rem;
+    }
+
+    .map-heading {
+      display: flex; align-items: baseline; gap: 1rem; margin-bottom: 1.2rem;
+    }
+
+    .map-heading h2 {
+      font-family: 'Cormorant Garamond', serif;
+      font-size: 1.6rem; font-weight: 300; font-style: italic;
+    }
+
+    .map-heading span {
+      font-size: 0.65rem; letter-spacing: 0.2em;
+      text-transform: uppercase; color: var(--muted);
+    }
+
+    .map-canvas { width: 100%; height: 480px; border: 1px solid var(--rule); }
+
+    /* Leaflet popup */
+    .leaflet-popup-content-wrapper {
+      border-radius: 0; box-shadow: 0 4px 20px rgba(0,0,0,0.12);
+      font-family: 'Jost', sans-serif; padding: 0; overflow: hidden; max-width: 260px;
+    }
+    .leaflet-popup-content { margin: 0; width: 260px !important; }
+    .map-popup img { width: 100%; height: 140px; object-fit: cover; display: block; }
+    .map-popup-body { padding: 0.9rem 1rem 0.8rem; }
+    .map-popup-rank { font-family: 'Cormorant Garamond', serif; font-size: 1.8rem; font-weight: 300; color: var(--rule); line-height: 1; }
+    .map-popup-name { font-family: 'Cormorant Garamond', serif; font-size: 1.15rem; font-weight: 400; margin: 0.1rem 0 0.4rem; }
+    .map-popup-commentary { font-size: 0.75rem; line-height: 1.6; color: #3A3530; margin-bottom: 0.6rem; }
+    .map-popup-meta { font-size: 0.68rem; color: var(--muted); line-height: 1.6; }
+    .map-popup-meta a { color: var(--accent); text-decoration: none; }
+    .leaflet-popup-tip-container { display: none; }
+
+    /* ── RESPONSIVE ── */
+    @media (max-width: 700px) {
+      header { padding: 0 1rem; }
+      .masthead { padding: 1.5rem 0 0.6rem; }
+      .tagline { font-size: 0.6rem; padding-bottom: 1rem; }
+      nav { gap: 1.2rem; padding: 0.75rem 0; }
+      .nav-sep { display: none; }
+      .edition-bar { margin-top: 1.5rem; padding: 0 1rem; }
+      .edition-title { font-size: 1.2rem; }
+      .edition-sub { display: none; }
+      .list { padding: 1.5rem 1rem 3rem; gap: 2.5rem; }
+      .card-body { padding-top: 1rem; padding-bottom: 1.5rem; }
+      .card-meta { flex-direction: column; gap: 0.5rem; }
+      .map-section { padding: 0 1rem; margin-bottom: 3rem; }
+      .map-canvas { height: 320px; }
+      .nav-menu { left: 0; transform: none; }
+    }
+  </style>
+</head>
+<body>
+
+<header>
+  <div class="masthead">The Insider Edit</div>
+  <div class="tagline">Curated tables worth your time</div>
+  <nav>
+    <div class="nav-item">
+      <span class="nav-label">City</span>
+      <span style="font-family:'Jost',sans-serif;font-size:0.72rem;font-weight:500;letter-spacing:0.18em;text-transform:uppercase;">London</span>
+    </div>
+
+    <span class="nav-sep">|</span>
+
+    <div class="nav-item">
+      <span class="nav-label">Cuisine</span>
+      <div class="nav-dropdown" id="cuisineNav">
+        <button class="nav-trigger" onclick="toggleCuisineMenu()">
+          <span id="currentCuisineLabel">Indian</span>
+          <span class="chevron">▾</span>
+        </button>
+        <div class="nav-menu" id="cuisineMenu">
+          <!-- populated by JS from CUISINES array -->
+        </div>
+      </div>
+    </div>
+
+    <span class="nav-sep">|</span>
+
+    <a href="#about" class="nav-about">About</a>
+  </nav>
+</header>
+
+<!-- ═══════════════════════════════ INDIAN ═══════════════════════════════ -->
+<section class="cuisine-section" id="section-indian">
+  <div class="edition-bar">
+    <span class="edition-title">London — Indian</span>
+    <span class="edition-sub">The top 10</span>
+    <span class="edition-rule"></span>
+  </div>
+
+  <div class="list">
+
+    <article class="card">
+      <div class="card-rank">01</div>
+      <img class="card-image" src="https://res.cloudinary.com/the-infatuation/image/upload/f_auto/q_auto/v1663315945/images/Tamil_Prince_group_Aleksandra_Boruch_London4_vmw8dy.jpg" alt="Tamil Prince" />
+      <div class="card-body">
+        <h2 class="card-name">Tamil Prince</h2>
+        <p class="card-commentary">A north London neighbourhood gem that punches far above its postcode. Tamil Prince brings the bold, coconut-rich flavours of Tamil Nadu to Islington — the chettinad lamb and prawn masala are cooked with a precision that would shame many a white-tablecloth rival.</p>
+        <div class="card-meta">
+          <div class="stars">★★★★<span style="opacity:0.5">★</span>
+            <span class="rating-score">4.5</span>
+            <span style="color:var(--muted)">Google rating · (2,253 reviews)</span>
+          </div>
+          <span class="card-address">115 Hemingford Rd, Barnsbury, London N1 1BS</span>
+          <span class="card-link"><a href="https://www.thetamilprince.com" target="_blank">Visit website →</a></span>
+        </div>
+      </div>
+    </article>
+
+    <article class="card">
+      <div class="card-rank">02</div>
+      <img class="card-image" src="https://dynamic-media-cdn.tripadvisor.com/media/photo-o/1b/03/a6/85/ground-floor-at-gymkhana.jpg?w=1200" alt="Gymkhana" />
+      <div class="card-body">
+        <h2 class="card-name">Gymkhana</h2>
+        <p class="card-commentary">Michelin-starred and impossibly glamorous, Gymkhana channels the grandeur of colonial India's elite sports clubs. The kid goat methi keema and wild muntjac biryani are as theatrical as the surroundings — dark wood, ceiling fans, silver trophies.</p>
+        <div class="card-meta">
+          <div class="stars">★★★★<span style="opacity:0.5">★</span>
+            <span class="rating-score">4.4</span>
+            <span style="color:var(--muted)">Google rating · (3,186 reviews)</span>
+          </div>
+          <span class="card-address">42 Albemarle St, Mayfair, London W1S 4JH</span>
+          <span class="card-link"><a href="https://gymkhanarestaurants.com/london/" target="_blank">Visit website →</a></span>
+        </div>
+      </div>
+    </article>
+
+    <article class="card">
+      <div class="card-rank">03</div>
+      <img class="card-image" src="https://dynamic-media-cdn.tripadvisor.com/media/photo-o/1d/b3/dc/31/bibi.jpg?w=1200" alt="Bibi" />
+      <div class="card-body">
+        <h2 class="card-name">Bibi</h2>
+        <p class="card-commentary">Chet Sharma's Mayfair debut is quiet revolution — vegetable-forward, technically precise, and deeply personal. Bibi traces the food memories of a British-Indian childhood through a short, considered menu that changes constantly. The aloo chaat alone is worth the reservation.</p>
+        <div class="card-meta">
+          <div class="stars">★★★★<span style="opacity:0.5">★</span>
+            <span class="rating-score">4.5</span>
+            <span style="color:var(--muted)">Google rating · (613 reviews)</span>
+          </div>
+          <span class="card-address">42 North Audley St, Mayfair, London W1K 6ZP</span>
+          <span class="card-link"><a href="https://www.bibirestaurants.com" target="_blank">Visit website →</a></span>
+        </div>
+      </div>
+    </article>
+
+    <article class="card">
+      <div class="card-rank">04</div>
+      <img class="card-image" src="https://dynamic-media-cdn.tripadvisor.com/media/photo-o/2f/91/2f/01/dining-at-trishna.jpg?w=1200" alt="Trishna" />
+      <div class="card-body">
+        <h2 class="card-name">Trishna</h2>
+        <p class="card-commentary">Named after a legendary Mumbai seafood institution, Trishna in Marylebone has held its Michelin star with graceful consistency. The brown butter crab with kohlrabi is the dish that made its name — and still does. Understated, accomplished, essential.</p>
+        <div class="card-meta">
+          <div class="stars">★★★★<span style="opacity:0.5">★</span>
+            <span class="rating-score">4.5</span>
+            <span style="color:var(--muted)">Google rating · (1,940 reviews)</span>
+          </div>
+          <span class="card-address">15–17 Blandford St, Marylebone, London W1U 3DG</span>
+          <span class="card-link"><a href="https://trishnalondon.com" target="_blank">Visit website →</a></span>
+        </div>
+      </div>
+    </article>
+
+    <article class="card">
+      <div class="card-rank">05</div>
+      <img class="card-image" src="https://tayyabs.co.uk/images/food/lambChops.jpg" alt="Tayyabs — lamb chops" />
+      <div class="card-body">
+        <h2 class="card-name">Tayyabs</h2>
+        <p class="card-commentary">A Whitechapel institution since 1972, Tayyabs is the great leveller — the queue stretches past the door regardless of who you are. The dry-spiced lamb chops, arriving sizzling on a cast-iron skillet, are among the most satisfying things you'll eat in this city.</p>
+        <div class="card-meta">
+          <div class="stars">★★★★<span style="color:transparent;-webkit-text-stroke:1px #B5472A">★</span>
+            <span class="rating-score">3.9</span>
+            <span style="color:var(--muted)">Google rating · (9,397 reviews)</span>
+          </div>
+          <span class="card-address">83–89 Fieldgate St, Whitechapel, London E1 1JU</span>
+          <span class="card-link"><a href="https://tayyabs.co.uk" target="_blank">Visit website →</a></span>
+        </div>
+      </div>
+    </article>
+
+    <article class="card">
+      <div class="card-rank">06</div>
+      <img class="card-image" src="https://londonandtheworld.com/wp-content/uploads/2020/04/CinnamonClub-7807-1440x960.jpg" alt="Cinnamon Club" />
+      <div class="card-body">
+        <h2 class="card-name">Cinnamon Club</h2>
+        <p class="card-commentary">Housed in the former Westminster Library, the Cinnamon Club marries old-school grandeur with Vivek Singh's progressive Indian cooking. Power lunches and pre-theatre dinners unfold beneath vaulted ceilings — the tandoori salmon and game dishes are reliably magnificent.</p>
+        <div class="card-meta">
+          <div class="stars">★★★★<span style="color:transparent;-webkit-text-stroke:1px #B5472A">★</span>
+            <span class="rating-score">4.0</span>
+            <span style="color:var(--muted)">Google rating · (3,200 reviews)</span>
+          </div>
+          <span class="card-address">The Old Westminster Library, 30–32 Great Smith St, London SW1P 3BU</span>
+          <span class="card-link"><a href="https://cinnamonclub.com" target="_blank">Visit website →</a></span>
+        </div>
+      </div>
+    </article>
+
+    <article class="card">
+      <div class="card-rank">07</div>
+      <img class="card-image" src="https://benaresrestaurant.com/wp-content/uploads/2026/04/LAMB-CHOP-PULAO-TASTING-1536x1024.jpg" alt="Benares" />
+      <div class="card-body">
+        <h2 class="card-name">Benares</h2>
+        <p class="card-commentary">Atul Kochhar's Michelin-starred Mayfair flagship brought a new rigour to British-Indian fine dining. The cooking draws on the holy city of Varanasi — earthy, aromatic, rooted — while the service achieves a polish that feels genuinely effortless.</p>
+        <div class="card-meta">
+          <div class="stars">★★★★<span style="opacity:0.5">★</span>
+            <span class="rating-score">4.4</span>
+            <span style="color:var(--muted)">Google rating · (2,561 reviews)</span>
+          </div>
+          <span class="card-address">12a Berkeley Square, Mayfair, London W1J 6BS</span>
+          <span class="card-link"><a href="https://benaresrestaurant.com" target="_blank">Visit website →</a></span>
+        </div>
+      </div>
+    </article>
+
+    <article class="card">
+      <div class="card-rank">08</div>
+      <img class="card-image" src="https://dynamic-media-cdn.tripadvisor.com/media/photo-o/1a/7b/04/96/signature-dishes.jpg?w=1200" alt="Kricket" />
+      <div class="card-body">
+        <h2 class="card-name">Kricket</h2>
+        <p class="card-commentary">Born in a Brixton shipping container, Kricket grew up fast. The Soho and White City outposts now serve some of the most creative Indian small plates in London — Keralan fried chicken, smoked aubergine chutney, and a chaat selection that rewrites the rulebook every season.</p>
+        <div class="card-meta">
+          <div class="stars">★★★★<span style="opacity:0.5">★</span>
+            <span class="rating-score">4.6</span>
+            <span style="color:var(--muted)">Google rating · (3,056 reviews)</span>
+          </div>
+          <span class="card-address">12 Denman St, Soho, London W1D 7HH</span>
+          <span class="card-link"><a href="https://kricketrestaurants.com" target="_blank">Visit website →</a></span>
+        </div>
+      </div>
+    </article>
+
+    <article class="card">
+      <div class="card-rank">09</div>
+      <img class="card-image" src="https://dynamic-media-cdn.tripadvisor.com/media/photo-o/06/f4/69/53/dishoom-king-s-cross.jpg?w=1200" alt="Dishoom King's Cross" />
+      <div class="card-body">
+        <h2 class="card-name">Dishoom King's Cross</h2>
+        <p class="card-commentary">The King's Cross outpost — set in a former railway granary — may be the most atmospheric of the lot. Come for the bacon naan roll at breakfast, stay for the house black daal that simmers for 24 hours.</p>
+        <div class="card-meta">
+          <div class="stars">★★★★★
+            <span class="rating-score">4.8</span>
+            <span style="color:var(--muted)">Google rating · (31,000 reviews)</span>
+          </div>
+          <span class="card-address">5 Stable St, King's Cross, London N1C 4AB</span>
+          <span class="card-link"><a href="https://dishoom.com/kings-cross/" target="_blank">Visit website →</a></span>
+        </div>
+      </div>
+    </article>
+
+    <article class="card">
+      <div class="card-rank">10</div>
+      <img class="card-image" src="https://dynamic-media-cdn.tripadvisor.com/media/photo-o/32/df/88/17/the-great-indian-interior.jpg?w=1200" alt="The Great Indian" />
+      <div class="card-body">
+        <h2 class="card-name">The Great Indian</h2>
+        <p class="card-commentary">Opened in January 2025 in a handsomely converted Archway pub, The Great Indian is a neighbourhood triumph. Chef Jolly — a MasterChef India judge — brings thirty years of regional expertise to a menu that roams the subcontinent. The Punjabi lamb curry and dal makhani are already local legends.</p>
+        <div class="card-meta">
+          <div class="stars">★★★★<span style="opacity:0.5">★</span>
+            <span class="rating-score">4.5</span>
+            <span style="color:var(--muted)">Google rating · (new opening)</span>
+          </div>
+          <span class="card-address">139 Marlborough Rd, Archway, London N19 4NU</span>
+          <span class="card-link"><a href="https://www.thegreatindian.uk/" target="_blank">Visit website →</a></span>
+        </div>
+      </div>
+    </article>
+
+  </div>
+
+  <div class="map-section">
+    <div class="map-heading">
+      <h2>Find them on the map</h2>
+      <span>Click a pin for details</span>
+    </div>
+    <div class="map-canvas" id="map-indian"></div>
+  </div>
+</section>
+
+<!-- ═══════════════════════════════ ITALIAN ═══════════════════════════════ -->
+<section class="cuisine-section" id="section-italian">
+  <div class="edition-bar">
+    <span class="edition-title">London — Italian</span>
+    <span class="edition-sub">Our selection</span>
+    <span class="edition-rule"></span>
+  </div>
+
+  <div class="list">
+
+    <article class="card">
+      <div class="card-rank">01</div>
+      <img class="card-image" src="https://dynamic-media-cdn.tripadvisor.com/media/photo-o/21/50/65/f2/caption.jpg?w=1200" alt="Brutto" />
+      <div class="card-body">
+        <h2 class="card-name">Brutto</h2>
+        <p class="card-commentary">Russell Norman's final, finest love letter to Florence. Gingham tablecloths, bottles of Chianti, handmade pasta and the kind of boisterous warmth that makes you stay for a third glass. A Michelin Bib Gourmand trattoria in Farringdon that feels like it belongs on a Florentine backstreet.</p>
+        <div class="card-meta">
+          <div class="stars">★★★★<span style="opacity:0.5">★</span>
+            <span class="rating-score">4.4</span>
+            <span style="color:var(--muted)">Google rating · (895 reviews)</span>
+          </div>
+          <span class="card-address">35–37 Greenhill Rents, Farringdon, London EC1M 6BN</span>
+          <span class="card-link"><a href="https://www.brutto.co.uk" target="_blank">Visit website →</a></span>
+        </div>
+      </div>
+    </article>
+
+    <article class="card">
+      <div class="card-rank">02</div>
+      <img class="card-image" src="https://10magazine.com/wp-content/uploads/2025/10/Pappardelle-with-beef-shin-ragu.jpg" alt="Trullo — pappardelle with beef shin ragù" />
+      <div class="card-body">
+        <h2 class="card-name">Trullo</h2>
+        <p class="card-commentary">Islington's most-loved Italian, and rightly so. Trullo has been turning out immaculate seasonal pasta and wood-grilled meats since 2010 with a daily-changing menu that follows the market rather than the calendar. The tagliarini with Dorset crab is the stuff of neighbourhood legend.</p>
+        <div class="card-meta">
+          <div class="stars">★★★★<span style="opacity:0.5">★</span>
+            <span class="rating-score">4.5</span>
+            <span style="color:var(--muted)">Google rating · (1,806 reviews)</span>
+          </div>
+          <span class="card-address">300–302 St Paul's Rd, Islington, London N1 2LH</span>
+          <span class="card-link"><a href="https://www.trullorestaurant.com" target="_blank">Visit website →</a></span>
+        </div>
+      </div>
+    </article>
+
+    <article class="card">
+      <div class="card-rank">03</div>
+      <img class="card-image" src="https://dynamic-media-cdn.tripadvisor.com/media/photo-o/16/1e/3d/b9/the-conservatory.jpg?w=1200" alt="Luca — the conservatory" />
+      <div class="card-body">
+        <h2 class="card-name">Luca</h2>
+        <p class="card-commentary">Michelin-starred and effortlessly beautiful, Luca applies an Italian lens to the finest British seasonal produce. The conservatory — light-flooded, elegant, impossibly photogenic — is one of London's great dining rooms. The pasta is extraordinary; the fettuccine with white truffle is a once-a-season obligation.</p>
+        <div class="card-meta">
+          <div class="stars">★★★★<span style="opacity:0.5">★</span>
+            <span class="rating-score">4.5</span>
+            <span style="color:var(--muted)">Google rating · (1,200 reviews)</span>
+          </div>
+          <span class="card-address">88 St John St, Clerkenwell, London EC1M 4EH</span>
+          <span class="card-link"><a href="https://luca.restaurant" target="_blank">Visit website →</a></span>
+        </div>
+      </div>
+    </article>
+
+    <article class="card">
+      <div class="card-rank">04</div>
+      <img class="card-image" src="https://www.hot-dinners.com/media/reviews/photos/original/64/6c/29/osteriotufo-17-1657036491.jpg" alt="Osteria Tufo" />
+      <div class="card-body">
+        <h2 class="card-name">Osteria Tufo</h2>
+        <p class="card-commentary">A gem hiding in plain sight on a Finsbury Park backstreet. This family-run Sicilian trattoria serves the kind of honest, deeply flavoured southern Italian cooking that the big-name restaurants in Mayfair can only approximate. The arancini are definitive; the handmade pasta puts many a grander address to shame.</p>
+        <div class="card-meta">
+          <div class="stars">★★★★<span style="opacity:0.5">★</span>
+            <span class="rating-score">4.6</span>
+            <span style="color:var(--muted)">Google rating · (658 reviews)</span>
+          </div>
+          <span class="card-address">67 Fonthill Rd, Finsbury Park, London N4 3HZ</span>
+          <span class="card-link"><a href="http://www.osteriatufo.co.uk" target="_blank">Visit website →</a></span>
+        </div>
+      </div>
+    </article>
+
+    <article class="card">
+      <div class="card-rank">05</div>
+      <img class="card-image" src="https://cecconisrestaurants.com/media/bc0hecex/mariell-lindhansen.jpg" alt="Cecconi's Mayfair — interior, photo: Mariell Lindhansen" />
+      <div class="card-body">
+        <h2 class="card-name">Cecconi's</h2>
+        <p class="card-commentary">The great all-day Italian of Mayfair. Cecconi's occupies its Burlington Gardens corner with the quiet confidence of somewhere that has nothing to prove — breakfast through to late supper, every occasion handled with the same unhurried grace. The eggs royale rivals anything in the city.</p>
+        <div class="card-meta">
+          <div class="stars">★★★★<span style="opacity:0.5">★</span>
+            <span class="rating-score">4.3</span>
+            <span style="color:var(--muted)">Google rating · (2,202 reviews)</span>
+          </div>
+          <span class="card-address">5A Burlington Gardens, Mayfair, London W1S 3EP</span>
+          <span class="card-link"><a href="https://www.cecconis.co.uk" target="_blank">Visit website →</a></span>
+        </div>
+      </div>
+    </article>
+
+    <article class="card">
+      <div class="card-rank">06</div>
+      <img class="card-image" src="https://www.boccadilupo.com/images/_large/BDL-2022-food-fried-artichoke-alla-giudia-1.jpg" alt="Bocca di Lupo — fried artichoke alla giudia" />
+      <div class="card-body">
+        <h2 class="card-name">Bocca di Lupo</h2>
+        <p class="card-commentary">Jacob Kenedy's Soho institution has spent fifteen years proving that Italian cooking is as much about region as nation. Every dish traces its roots to a specific province — the menu reads like an edible map of the peninsula. Sit at the marble counter and watch the kitchen; it is theatre and dinner in equal measure.</p>
+        <div class="card-meta">
+          <div class="stars">★★★★<span style="opacity:0.5">★</span>
+            <span class="rating-score">4.6</span>
+            <span style="color:var(--muted)">Google rating · (3,679 reviews)</span>
+          </div>
+          <span class="card-address">12 Archer St, Soho, London W1D 7BB</span>
+          <span class="card-link"><a href="https://www.boccadilupo.com" target="_blank">Visit website →</a></span>
+        </div>
+      </div>
+    </article>
+
+    <article class="card">
+      <div class="card-rank">07</div>
+      <img class="card-image" src="https://dynamic-media-cdn.tripadvisor.com/media/photo-o/2a/ee/9a/7b/pizza.jpg?w=1200" alt="L'Antica Pizzeria da Michele — pizza" />
+      <div class="card-body">
+        <h2 class="card-name">L'Antica Pizzeria da Michele</h2>
+        <p class="card-commentary">The Neapolitan institution that arguably makes the world's most famous pizza now has a Soho outpost. Two pizzas: margherita and marinara. One wood-fired oven, gold and glorious, at the heart of a dramatically designed two-floor space. The simplicity is the statement.</p>
+        <div class="card-meta">
+          <div class="stars">★★★★<span style="color:transparent;-webkit-text-stroke:1px #B5472A">★</span>
+            <span class="rating-score">4.1</span>
+            <span style="color:var(--muted)">Google rating · (5,371 reviews)</span>
+          </div>
+          <span class="card-address">44 Old Compton St, Soho, London W1D 4TY</span>
+          <span class="card-link"><a href="https://www.anticapizzeriadamichele.co.uk/soho" target="_blank">Visit website →</a></span>
+        </div>
+      </div>
+    </article>
+
+    <article class="card">
+      <div class="card-rank">08</div>
+      <img class="card-image" src="https://dynamic-media-cdn.tripadvisor.com/media/photo-o/1b/ec/10/72/panna-cotta.jpg?w=1200" alt="Polpo — panna cotta" />
+      <div class="card-body">
+        <h2 class="card-name">Polpo</h2>
+        <p class="card-commentary">Modelled on the bacari of Venice — standing wine bars serving cichetti and good prosecco — Polpo on Beak Street remains one of Soho's most pleasurable evenings. The space is a beautiful Georgian townhouse; the food is affordable, confident, and always sharing-sized.</p>
+        <div class="card-meta">
+          <div class="stars">★★★★<span style="opacity:0.5">★</span>
+            <span class="rating-score">4.4</span>
+            <span style="color:var(--muted)">Google rating · (2,689 reviews)</span>
+          </div>
+          <span class="card-address">41 Beak St, Soho, London W1F 9SB</span>
+          <span class="card-link"><a href="https://www.polpo.co.uk" target="_blank">Visit website →</a></span>
+        </div>
+      </div>
+    </article>
+
+    <article class="card">
+      <div class="card-rank">09</div>
+      <img class="card-image" src="https://cdn.sanity.io/images/aa3sekul/production/e68dae6bedccc669db603f6473e628b69b3d51b9-8570x5713.jpg?w=1200&fit=crop&auto=format" alt="Circolo Popolare" />
+      <div class="card-body">
+        <h2 class="card-name">Circolo Popolare</h2>
+        <p class="card-commentary">Maximalism in full, glorious flight. The Big Mamma group's Fitzrovia outpost is draped floor-to-ceiling in flowers, citrus trees and peacock feathers — simultaneously absurd and magnificent. Behind the spectacle, serious Italian cooking: handmade pasta, exceptional burrata, and the best spritz list in the city.</p>
+        <div class="card-meta">
+          <div class="stars">★★★★★
+            <span class="rating-score">4.8</span>
+            <span style="color:var(--muted)">Google rating · (31,980 reviews)</span>
+          </div>
+          <span class="card-address">40–41 Rathbone Pl, Fitzrovia, London W1T 1HX</span>
+          <span class="card-link"><a href="https://www.circolopopolare.com/restaurants/circolopopolare-london" target="_blank">Visit website →</a></span>
+        </div>
+      </div>
+    </article>
+
+    <article class="card">
+      <div class="card-rank">10</div>
+      <img class="card-image" src="https://dynamic-media-cdn.tripadvisor.com/media/photo-o/1a/30/b3/f3/lina-stores-king-s-cross.jpg?w=1200" alt="Lina Stores" />
+      <div class="card-body">
+        <h2 class="card-name">Lina Stores</h2>
+        <p class="card-commentary">The King's Cross outpost of the beloved Soho institution — all signature mint green, beautiful exposed brick, and a buzzy open kitchen turning out impeccable handmade pasta. Set over two floors of a Victorian railway building on Stable Street, it is one of the most charming dining rooms in the neighbourhood.</p>
+        <div class="card-meta">
+          <div class="stars">★★★★<span style="opacity:0.5">★</span>
+            <span class="rating-score">4.5</span>
+            <span style="color:var(--muted)">Google rating · (1,400 reviews)</span>
+          </div>
+          <span class="card-address">20 Stable St, King's Cross, London N1C 4DR</span>
+          <span class="card-link"><a href="https://www.linastores.co.uk" target="_blank">Visit website →</a></span>
+        </div>
+      </div>
+    </article>
+
+    <article class="card">
+      <div class="card-rank">11</div>
+      <img class="card-image" src="https://dynamic-media-cdn.tripadvisor.com/media/photo-o/1c/e3/81/61/photo0jpg.jpg?w=1200" alt="Briciole — exterior entrance" />
+      <div class="card-body">
+        <h2 class="card-name">Briciole</h2>
+        <p class="card-commentary">Marylebone's most reliable Italian secret. Part trattoria, part wine bar, part deli, Briciole on Homer Street operates at a frequency of unhurried pleasure — Lazio-rooted cooking, a serious wine list weighted towards small Italian producers. The bucatini all'amatriciana is faultless.</p>
+        <div class="card-meta">
+          <div class="stars">★★★★<span style="opacity:0.5">★</span>
+            <span class="rating-score">4.5</span>
+            <span style="color:var(--muted)">Google rating · (1,654 reviews)</span>
+          </div>
+          <span class="card-address">20 Homer St, Marylebone, London W1H 4NA</span>
+          <span class="card-link"><a href="https://briciole.co.uk" target="_blank">Visit website →</a></span>
+        </div>
+      </div>
+    </article>
+
+  </div>
+
+  <div class="map-section">
+    <div class="map-heading">
+      <h2>Find them on the map</h2>
+      <span>Click a pin for details</span>
+    </div>
+    <div class="map-canvas" id="map-italian"></div>
+  </div>
+</section>
+
+<script>
+  // ── CUISINE REGISTRY ──
+  // To add a new cuisine: add entry here + a <section id="section-KEY"> above
+  const CUISINES = [
+    { key: 'indian',  label: 'Indian'  },
+    { key: 'italian', label: 'Italian' },
+    // { key: 'japanese', label: 'Japanese' },  ← add future cuisines here
+  ];
+
+  // ── NAV DROPDOWN ──
+  const menu = document.getElementById('cuisineMenu');
+  const label = document.getElementById('currentCuisineLabel');
+  const nav   = document.getElementById('cuisineNav');
+
+  // ── SECTION SWITCHING ──
+  const maps = {};
+
+  function showCuisine(key) {
+    if (!key || !document.getElementById('section-' + key)) key = CUISINES[0].key;
+    document.querySelectorAll('.cuisine-section').forEach(s => s.classList.remove('active'));
+    document.getElementById('section-' + key).classList.add('active');
+    label.textContent = CUISINES.find(c => c.key === key)?.label || key;
+    buildMenu(key);
+    nav.classList.remove('open');
+    if (!maps[key]) initMap(key);
+    else maps[key].invalidateSize();
+  }
+
+  function buildMenu(activeCuisine) {
+    menu.innerHTML = '';
+    CUISINES.forEach(c => {
+      const a = document.createElement('a');
+      a.textContent = c.label;
+      if (c.key === activeCuisine) {
+        a.className = 'current';
+      } else {
+        a.href = '#';
+        a.addEventListener('click', e => { e.preventDefault(); showCuisine(c.key); });
+      }
+      menu.appendChild(a);
+    });
+  }
+
+  function toggleCuisineMenu() {
+    nav.classList.toggle('open');
+  }
+
+  document.addEventListener('click', e => {
+    if (!e.target.closest('#cuisineNav')) nav.classList.remove('open');
+  });
+
+  // ── MAP DATA ──
+  const MAP_DATA = {
+    indian: {
+      center: [51.512, -0.13], zoom: 12,
+      pins: [
+        { rank:'01', name:'Tamil Prince',       lat:51.5461, lng:-0.1049, rating:4.5, reviews:'2,253',  address:'115 Hemingford Rd, N1 1BS',     url:'https://www.thetamilprince.com',              img:'https://res.cloudinary.com/the-infatuation/image/upload/f_auto/q_auto/v1663315945/images/Tamil_Prince_group_Aleksandra_Boruch_London4_vmw8dy.jpg', commentary:'Bold Tamil Nadu flavours in Islington — the chettinad lamb is extraordinary.' },
+        { rank:'02', name:'Gymkhana',            lat:51.5087, lng:-0.1436, rating:4.4, reviews:'3,186',  address:'42 Albemarle St, Mayfair, W1S 4JH', url:'https://gymkhanarestaurants.com/london/',     img:'https://dynamic-media-cdn.tripadvisor.com/media/photo-o/1b/03/a6/85/ground-floor-at-gymkhana.jpg', commentary:'Michelin-starred Mayfair glamour — dark wood, ceiling fans, silver trophies.' },
+        { rank:'03', name:'Bibi',                lat:51.5130, lng:-0.1499, rating:4.5, reviews:'613',    address:'42 North Audley St, Mayfair, W1K 6ZP', url:'https://www.bibirestaurants.com',           img:'https://dynamic-media-cdn.tripadvisor.com/media/photo-o/1d/b3/dc/31/bibi.jpg', commentary:'Vegetable-forward, technically precise — the aloo chaat alone is worth it.' },
+        { rank:'04', name:'Trishna',             lat:51.5188, lng:-0.1554, rating:4.5, reviews:'1,940',  address:'15–17 Blandford St, Marylebone, W1U 3DG', url:'https://trishnalondon.com',              img:'https://dynamic-media-cdn.tripadvisor.com/media/photo-o/2f/91/2f/01/dining-at-trishna.jpg', commentary:'Michelin-starred seafood — the brown butter crab made its name and still does.' },
+        { rank:'05', name:'Tayyabs',             lat:51.5157, lng:-0.0614, rating:3.9, reviews:'9,397',  address:'83–89 Fieldgate St, Whitechapel, E1 1JU', url:'https://tayyabs.co.uk',                  img:'https://tayyabs.co.uk/images/food/lambChops.jpg', commentary:'A Whitechapel institution since 1972 — the lamb chops on a sizzler are legendary.' },
+        { rank:'06', name:'Cinnamon Club',       lat:51.4981, lng:-0.1291, rating:4.0, reviews:'3,200',  address:'30–32 Great Smith St, Westminster, SW1P 3BU', url:'https://cinnamonclub.com',           img:'https://londonandtheworld.com/wp-content/uploads/2020/04/CinnamonClub-7807-1440x960.jpg', commentary:'Progressive Indian in a grand Westminster library — vaulted ceilings, serious cooking.' },
+        { rank:'07', name:'Benares',             lat:51.5099, lng:-0.1462, rating:4.4, reviews:'2,561',  address:'12a Berkeley Square, Mayfair, W1J 6BS', url:'https://benaresrestaurant.com',           img:'https://benaresrestaurant.com/wp-content/uploads/2026/04/LAMB-CHOP-PULAO-TASTING-1536x1024.jpg', commentary:'Atul Kochhar\'s Mayfair flagship — earthy, aromatic, polished Michelin dining.' },
+        { rank:'08', name:'Kricket',             lat:51.5109, lng:-0.1353, rating:4.6, reviews:'3,056',  address:'12 Denman St, Soho, W1D 7HH',      url:'https://kricketrestaurants.com',              img:'https://dynamic-media-cdn.tripadvisor.com/media/photo-o/1a/7b/04/96/signature-dishes.jpg', commentary:'Born in a Brixton container — now Soho\'s most creative Indian small plates.' },
+        { rank:'09', name:'Dishoom King\'s Cross', lat:51.5353, lng:-0.1244, rating:4.8, reviews:'31,000', address:'5 Stable St, King\'s Cross, N1C 4AB', url:'https://dishoom.com/kings-cross/',       img:'https://dynamic-media-cdn.tripadvisor.com/media/photo-o/06/f4/69/53/dishoom-king-s-cross.jpg', commentary:'Set in a former railway granary — the most atmospheric Dishoom.' },
+        { rank:'10', name:'The Great Indian',    lat:51.5659, lng:-0.1296, rating:4.5, reviews:'new',    address:'139 Marlborough Rd, Archway, N19 4NU', url:'https://www.thegreatindian.uk/',          img:'https://dynamic-media-cdn.tripadvisor.com/media/photo-o/32/df/88/17/the-great-indian-interior.jpg', commentary:'Archway\'s brilliant new Indian gastropub — Chef Jolly\'s 30 years of regional expertise.' },
+      ]
+    },
+    italian: {
+      center: [51.518, -0.128], zoom: 12,
+      pins: [
+        { rank:'01', name:'Brutto',              lat:51.5214, lng:-0.1034, rating:4.4, reviews:'895',    address:'35–37 Greenhill Rents, Farringdon, EC1M 6BN', url:'https://www.brutto.co.uk',            img:'https://dynamic-media-cdn.tripadvisor.com/media/photo-o/21/50/65/f2/caption.jpg', commentary:'Russell Norman\'s Florentine love letter — gingham, Chianti, immaculate pasta.' },
+        { rank:'02', name:'Trullo',              lat:51.5474, lng:-0.1013, rating:4.5, reviews:'1,806',  address:'300–302 St Paul\'s Rd, Islington, N1 2LH', url:'https://www.trullorestaurant.com',       img:'https://10magazine.com/wp-content/uploads/2025/10/Pappardelle-with-beef-shin-ragu.jpg', commentary:'Islington\'s finest — seasonal Italian, daily-changing menu, pasta locals queue for.' },
+        { rank:'03', name:'Luca',                lat:51.5227, lng:-0.1012, rating:4.5, reviews:'1,200',  address:'88 St John St, Clerkenwell, EC1M 4EH', url:'https://luca.restaurant',                  img:'https://dynamic-media-cdn.tripadvisor.com/media/photo-o/16/1e/3d/b9/the-conservatory.jpg', commentary:'Michelin-starred Clerkenwell Italian — the conservatory is one of London\'s most beautiful rooms.' },
+        { rank:'04', name:'Osteria Tufo',        lat:51.5621, lng:-0.1098, rating:4.6, reviews:'658',    address:'67 Fonthill Rd, Finsbury Park, N4 3HZ', url:'http://www.osteriatufo.co.uk',             img:'https://www.hot-dinners.com/media/reviews/photos/original/64/6c/29/osteriotufo-17-1657036491.jpg', commentary:'Family-run Sicilian in Finsbury Park — the honest cooking the big Mayfair names can\'t match.' },
+        { rank:'05', name:'Cecconi\'s',          lat:51.5100, lng:-0.1413, rating:4.3, reviews:'2,202',  address:'5A Burlington Gardens, Mayfair, W1S 3EP', url:'https://www.cecconis.co.uk',              img:'https://cecconisrestaurants.com/media/bc0hecex/mariell-lindhansen.jpg', commentary:'Mayfair\'s great all-day Italian — Burlington Gardens elegance from breakfast to late supper.' },
+        { rank:'06', name:'Bocca di Lupo',       lat:51.5118, lng:-0.1347, rating:4.6, reviews:'3,679',  address:'12 Archer St, Soho, W1D 7BB',       url:'https://www.boccadilupo.com',                 img:'https://www.boccadilupo.com/images/_large/BDL-2022-food-fried-artichoke-alla-giudia-1.jpg', commentary:'Jacob Kenedy\'s celebrated Soho Italian — every dish traces its roots to a specific province.' },
+        { rank:'07', name:'L\'Antica da Michele', lat:51.5127, lng:-0.1314, rating:4.1, reviews:'5,371', address:'44 Old Compton St, Soho, W1D 4TY',   url:'https://www.anticapizzeriadamichele.co.uk/soho', img:'https://dynamic-media-cdn.tripadvisor.com/media/photo-o/2a/ee/9a/7b/pizza.jpg', commentary:'The world\'s most famous Neapolitan pizza in Soho. Two pizzas. One oven. No argument.' },
+        { rank:'08', name:'Polpo',               lat:51.5128, lng:-0.1367, rating:4.4, reviews:'2,689',  address:'41 Beak St, Soho, W1F 9SB',         url:'https://www.polpo.co.uk',                     img:'https://dynamic-media-cdn.tripadvisor.com/media/photo-o/1b/ec/10/72/panna-cotta.jpg', commentary:'Venetian bacaro-style sharing plates in a beautiful Georgian Soho townhouse.' },
+        { rank:'09', name:'Circolo Popolare',    lat:51.5183, lng:-0.1321, rating:4.8, reviews:'31,980', address:'40–41 Rathbone Pl, Fitzrovia, W1T 1HX', url:'https://www.circolopopolare.com/restaurants/circolopopolare-london', img:'https://cdn.sanity.io/images/aa3sekul/production/e68dae6bedccc669db603f6473e628b69b3d51b9-8570x5713.jpg?w=400&fit=crop&auto=format', commentary:'Maximalism at its most joyful — floor-to-ceiling botanicals, serious pasta, best spritz list in the city.' },
+        { rank:'10', name:'Lina Stores',         lat:51.5353, lng:-0.1232, rating:4.5, reviews:'1,400',  address:'20 Stable St, King\'s Cross, N1C 4DR', url:'https://www.linastores.co.uk',              img:'https://dynamic-media-cdn.tripadvisor.com/media/photo-o/1a/30/b3/f3/lina-stores-king-s-cross.jpg', commentary:'Mint green, handmade pasta, beautiful Victorian brick — King\'s Cross at its best.' },
+        { rank:'11', name:'Briciole',            lat:51.5195, lng:-0.1625, rating:4.5, reviews:'1,654',  address:'20 Homer St, Marylebone, W1H 4NA',   url:'https://briciole.co.uk',                      img:'https://dynamic-media-cdn.tripadvisor.com/media/photo-o/1c/e3/81/61/photo0jpg.jpg', commentary:'Marylebone\'s best-kept Italian secret — trattoria, wine bar and deli with faultless Lazio-rooted cooking.' },
+      ]
+    }
+  };
+
+  // ── MAP INIT ──
+  function starsHtml(r) {
+    return Array.from({length:5}, (_,i) => i < Math.round(r)
+      ? `<svg width="11" height="11" viewBox="0 0 24 24" fill="#B5472A"><polygon points="12,2 15.09,8.26 22,9.27 17,14.14 18.18,21.02 12,17.77 5.82,21.02 7,14.14 2,9.27 8.91,8.26"/></svg>`
+      : `<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#B5472A" stroke-width="1.5"><polygon points="12,2 15.09,8.26 22,9.27 17,14.14 18.18,21.02 12,17.77 5.82,21.02 7,14.14 2,9.27 8.91,8.26"/></svg>`
+    ).join('');
+  }
+
+  function initMap(key) {
+    const d = MAP_DATA[key];
+    if (!d) return;
+    const m = L.map('map-' + key, { zoomControl: true, scrollWheelZoom: false }).setView(d.center, d.zoom);
+    L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
+      attribution: '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> © <a href="https://carto.com/">CARTO</a>',
+      maxZoom: 19
+    }).addTo(m);
+
+    d.pins.forEach(p => {
+      const icon = L.divIcon({
+        className: '',
+        html: `<div style="width:28px;height:28px;border-radius:50%;background:#B5472A;color:#fff;display:flex;align-items:center;justify-content:center;font-family:'Jost',sans-serif;font-size:9px;font-weight:500;box-shadow:0 2px 8px rgba(0,0,0,0.25);border:2px solid #fff;cursor:pointer;">${p.rank}</div>`,
+        iconSize: [28,28], iconAnchor: [14,14]
+      });
+      const popup = `<div class="map-popup">
+        <img src="${p.img}" alt="${p.name}" />
+        <div class="map-popup-body">
+          <div class="map-popup-rank">${p.rank}</div>
+          <div class="map-popup-name">${p.name}</div>
+          <div class="map-popup-commentary">${p.commentary}</div>
+          <div class="map-popup-meta">
+            ${starsHtml(p.rating)} <strong>${p.rating}</strong> · ${p.reviews} Google reviews<br>
+            ${p.address}<br>
+            <a href="${p.url}" target="_blank">Visit website →</a>
+          </div>
+        </div>
+      </div>`;
+      L.marker([p.lat, p.lng], {icon}).addTo(m).bindPopup(popup, {maxWidth:260, offset:[0,-6]});
+    });
+
+    maps[key] = m;
+  }
+
+  // ── RANK NUMBERS ──
+  function injectRanks() {
+    document.querySelectorAll('.card').forEach(card => {
+      const rankEl = card.querySelector('.card-rank');
+      const nameEl = card.querySelector('.card-name');
+      if (!rankEl || !nameEl || nameEl.querySelector('.card-number')) return;
+      const span = document.createElement('span');
+      span.className = 'card-number';
+      span.textContent = rankEl.textContent.trim();
+      nameEl.insertBefore(span, nameEl.firstChild);
+      const img = card.querySelector('.card-image');
+      if (img && !img.parentElement.classList.contains('card-image-wrap')) {
+        const wrap = document.createElement('div');
+        wrap.className = 'card-image-wrap';
+        img.parentElement.insertBefore(wrap, img);
+        wrap.appendChild(img);
+      }
+    });
+  }
+
+  // ── BOOT ──
+  injectRanks();
+  const startKey = location.hash.replace('#', '') || CUISINES[0].key;
+  showCuisine(startKey);
+</script>
+
+</body>
+</html>
